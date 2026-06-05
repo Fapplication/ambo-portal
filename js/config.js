@@ -6,18 +6,30 @@
 // ============================================================
 
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbw0w0mnYPN_WpK5cuUjxc61toEMTjmeFoaK8mROlRG4T0cEt2aWLU7DpjBoHrTbl47F/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbyQUVs4imZOzio759zhi0yBBE42VCxGcYZcIvz9ZJiU8d2ZbsgKZ6_RMifoWeu41zmW/exec",
   ADMIN_ID: "admin",
   ADMIN_PASSWORD: "admin123"
 };
 
 // ── Shared API caller ────────────────────────────────────────
+// ── Shared API caller (CORS-safe for Google Apps Script) ────
 async function apiCall(payload) {
-  const res = await fetch(CONFIG.API_URL, {
+  // GAS doesn't accept JSON cross-origin. We must POST as form-encoded
+  // with no-cors, then do a GET to read the response.
+  const params = new URLSearchParams();
+  params.append("payload", JSON.stringify(payload));
+
+  // Fire the POST (no-cors = no response body, but GAS receives it)
+  await fetch(CONFIG.API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    mode: "no-cors",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString()
   });
+
+  // Now GET with the payload as a query param to actually read the result
+  const getUrl = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
+  const res = await fetch(getUrl, { method: "GET" });
   return await res.json();
 }
 
