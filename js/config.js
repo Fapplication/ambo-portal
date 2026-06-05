@@ -16,12 +16,25 @@ const CONFIG = {
 
 async function apiCall(payload) {
   const url = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
-  const res = await fetch(url, {
-    method: "GET",
-    redirect: "follow"
-  });
-  return await res.json();
-}
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow"
+    });
+
+    // GAS sometimes returns HTML error page instead of JSON
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      console.error("GAS returned non-JSON:", text.substring(0, 200));
+      return { success: false, message: "Server returned an unexpected response. Check deployment settings." };
+    }
+  } catch(e) {
+    console.error("Fetch error:", e);
+    return { success: false, message: "Connection error: " + e.message };
+  }
 
   // Fire the POST (no-cors = no response body, but GAS receives it)
   await fetch(CONFIG.API_URL, {
