@@ -6,7 +6,7 @@
 // ============================================================
 
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbwMxw0dgUEaq3NJA7Nqb1EgAJ1QLEZJqodacLbNkKnH0tVIuiyg7BxX5BRtHQ1WvQTT_A/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbxsSXWoHXYsGQWXu-Ju0ufPVfvgpkqRSncMpJqFBqmK8RvDEu2VrwATbT21scRVW5SX/exec",
   ADMIN_ID: "admin",
   ADMIN_PASSWORD: "admin123"
 };
