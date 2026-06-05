@@ -1,9 +1,6 @@
 // ============================================================
 // AMBO UNIVERSITY PORTAL — Configuration
 // ============================================================
-// IMPORTANT: Replace the API_URL below with your deployed
-// Google Apps Script Web App URL after deployment.
-// ============================================================
 
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxag3kbACfwOiA7zc4pEHY-euD0lZ9E2sv0RmzAqWxajxzw2xPzPE5ZPTdDcJPhkPrT/exec",
@@ -11,13 +8,14 @@ const CONFIG = {
   ADMIN_PASSWORD: "admin123"
 };
 
-// ── Shared API caller ────────────────────────────────────────
+// ── Shared API caller ─────────────────────────────────────────
+// Uses GET + ?payload= to avoid the GAS POST redirect CORS bug.
+// GAS strips CORS headers when it issues a 302 redirect on POST,
+// causing browsers to reject the response ("connection reset").
 async function apiCall(payload) {
-  const res = await fetch(CONFIG.API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  const url = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error("Server returned " + res.status);
   return await res.json();
 }
 
@@ -49,7 +47,7 @@ function gradeColor(grade) {
   return map[grade] || "#4A5568";
 }
 
-// ── Complaint storage (local — no backend change needed) ─────
+// ── Complaint storage (local) ────────────────────────────────
 function saveComplaint(courseId, text, grade, total) {
   const existing = getComplaints();
   const user = getUser();
@@ -74,7 +72,10 @@ function getComplaints() {
 function updateComplaintStatus(id, status) {
   const all = getComplaints();
   const idx = all.findIndex(c => c.id === id);
-  if (idx !== -1) { all[idx].status = status; localStorage.setItem("au_complaints", JSON.stringify(all)); }
+  if (idx !== -1) {
+    all[idx].status = status;
+    localStorage.setItem("au_complaints", JSON.stringify(all));
+  }
 }
 
 // ── Notification store ────────────────────────────────────────
