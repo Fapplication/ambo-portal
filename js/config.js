@@ -1,24 +1,19 @@
 export const CONFIG = {
-  API_URL:
-    "https://script.google.com/macros/s/AKfycbxag3kbACfwOiA7zc4pEHY-euD0lZ9E2sv0RmzAqWxajxzw2xPzPE5ZPTdDcJPhkPrT/exec",
+  API_URL: "[script.google.com](https://script.google.com/macros/s/AKfycbxag3kbACfwOiA7zc4pEHY-euD0lZ9E2sv0RmzAqWxajxzw2xPzPE5ZPTdDcJPhkPrT/exec)",
   ADMIN_ID: "admin",
   ADMIN_PASSWORD: "admin123",
 };
 
-// Uses GET + ?payload= to bypass the GAS POST redirect CORS bug.
 export async function apiCall<T = unknown>(payload: Record<string, unknown>): Promise<T> {
   const url = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
-  const res = await fetch(url, { redirect: "follow" });
+  
+  const res = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+  });
+
   if (!res.ok) throw new Error("Server returned " + res.status);
   return res.json() as Promise<T>;
-}
-
-export function gradeOf(total: number): string {
-  if (total >= 90) return "A";
-  if (total >= 80) return "B";
-  if (total >= 70) return "C";
-  if (total >= 60) return "D";
-  return "F";
 }
 
 export function gradeColor(grade: string): string {
