@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambo University — FB Advanced Educational Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-split">
+    <!-- Left Panel -->
+    <div class="auth-brand">
+      <div class="brand-inner">
+        <div class="brand-logo">
+          <img src="logo.png" alt="Ambo University Logo" id="university-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';" />
+          <div id="logo-fallback" class="logo-fallback" style="display:none;">
+            <span>AU</span>
+          </div>
+        </div>
+        <h1 class="brand-name">Ambo University</h1>
+        <p class="brand-dept">Faculty of Engineering & Technology</p>
+        <div class="brand-divider"></div>
+        <p class="brand-tagline">Civil Engineering Department<br/>Advanced Educational Portal</p>
+        <div class="brand-features">
+          <div class="feature-item">
+            <span class="feat-icon">◈</span>
+            <span>Real-time marks & grades</span>
+          </div>
+          <div class="feature-item">
+            <span class="feat-icon">◈</span>
+            <span>Online examinations</span>
+          </div>
+          <div class="feature-item">
+            <span class="feat-icon">◈</span>
+            <span>Lecture notes & resources</span>
+          </div>
+          <div class="feature-item">
+            <span class="feat-icon">◈</span>
+            <span>Grade complaint system</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel — Login Form -->
+    <div class="auth-form-area">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+          <button class="tab-btn" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN TAB -->
+        <div id="tab-login" class="tab-content active">
+          <h2 class="form-title">Welcome back</h2>
+          <p class="form-sub">Enter your credentials to access the portal</p>
+          <div id="login-error" class="alert alert-error" style="display:none;"></div>
+          <div class="form-group">
+            <label>Student / Admin ID</label>
+            <input type="text" id="login-id" placeholder="e.g. ETS/123/15 or admin" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password" />
+              <button class="toggle-eye" onclick="togglePwd('login-pwd', this)" type="button">👁</button>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="doLogin()">
+            <span id="login-btn-text">Sign In</span>
+            <span id="login-spinner" class="spinner" style="display:none;"></span>
+          </button>
+          <a class="forgot-link" onclick="switchTab('forgot')">Forgot password?</a>
+        </div>
+
+        <!-- REGISTER TAB -->
+        <div id="tab-register" class="tab-content">
+          <h2 class="form-title">Create account</h2>
+          <p class="form-sub">Register with your pre-authorized student ID</p>
+          <div id="reg-error" class="alert alert-error" style="display:none;"></div>
+          <div id="reg-success" class="alert alert-success" style="display:none;"></div>
+          <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" id="reg-id" placeholder="e.g. ETS/123/15" />
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="As on your ID card" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="reg-pwd" placeholder="Choose a strong password" />
+              <button class="toggle-eye" onclick="togglePwd('reg-pwd', this)" type="button">👁</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="reg-pwd2" placeholder="Repeat password" />
+          </div>
+          <button class="btn-primary" onclick="doRegister()">
+            <span id="reg-btn-text">Create Account</span>
+            <span id="reg-spinner" class="spinner" style="display:none;"></span>
+          </button>
+        </div>
+
+        <!-- FORGOT PASSWORD TAB -->
+        <div id="tab-forgot" class="tab-content">
+          <h2 class="form-title">Reset password</h2>
+          <p class="form-sub">Enter your student ID to receive a reset code via Telegram</p>
+          <div id="forgot-error" class="alert alert-error" style="display:none;"></div>
+          <div id="forgot-success" class="alert alert-success" style="display:none;"></div>
+          <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" id="forgot-id" placeholder="e.g. ETS/123/15" />
+          </div>
+          <button class="btn-primary" onclick="doForgot()">Send Reset Code via Telegram</button>
+          <a class="forgot-link" onclick="switchTab('login')">← Back to login</a>
+        </div>
+      </div>
+
+      <p class="portal-note">
+        This portal is powered by the FB Advanced Educational & Administrative Core Engine.<br/>
+        Also accessible via our <strong>Telegram Bot</strong>.
+      </p>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
