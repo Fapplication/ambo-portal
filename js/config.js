@@ -1,40 +1,19 @@
-// ============================================================
-// AMBO UNIVERSITY PORTAL — Configuration
-// ============================================================
-
-const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbxag3kbACfwOiA7zc4pEHY-euD0lZ9E2sv0RmzAqWxajxzw2xPzPE5ZPTdDcJPhkPrT/exec",
+export const CONFIG = {
+  API_URL:
+    "https://script.google.com/macros/s/AKfycbxag3kbACfwOiA7zc4pEHY-euD0lZ9E2sv0RmzAqWxajxzw2xPzPE5ZPTdDcJPhkPrT/exec",
   ADMIN_ID: "admin",
-  ADMIN_PASSWORD: "admin123"
+  ADMIN_PASSWORD: "admin123",
 };
 
-// ── Shared API caller ─────────────────────────────────────────
-// Uses GET + ?payload= to avoid the GAS POST redirect CORS bug.
-// GAS strips CORS headers when it issues a 302 redirect on POST,
-// causing browsers to reject the response ("connection reset").
-async function apiCall(payload) {
+// Uses GET + ?payload= to bypass the GAS POST redirect CORS bug.
+export async function apiCall<T = unknown>(payload: Record<string, unknown>): Promise<T> {
   const url = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) throw new Error("Server returned " + res.status);
-  return await res.json();
+  return res.json() as Promise<T>;
 }
 
-// ── Session helpers ──────────────────────────────────────────
-function saveUser(data) {
-  sessionStorage.setItem("au_user", JSON.stringify(data));
-}
-
-function getUser() {
-  try { return JSON.parse(sessionStorage.getItem("au_user")); }
-  catch(e) { return null; }
-}
-
-function clearUser() {
-  sessionStorage.removeItem("au_user");
-}
-
-// ── Grade helper ─────────────────────────────────────────────
-function gradeOf(total) {
+export function gradeOf(total: number): string {
   if (total >= 90) return "A";
   if (total >= 80) return "B";
   if (total >= 70) return "C";
@@ -42,77 +21,71 @@ function gradeOf(total) {
   return "F";
 }
 
-function gradeColor(grade) {
-  const map = { A: "#276749", B: "#2B6CB0", C: "#744210", D: "#975A16", F: "#C53030" };
-  return map[grade] || "#4A5568";
+export function gradeColor(grade: string): string {
+  const map: Record<string, string> = {
+    A: "#059669", B: "#2563eb", C: "#d97706", D: "#ea580c", F: "#dc2626",
+  };
+  return map[grade] ?? "#6b7280";
 }
 
-// ── Complaint storage (local) ────────────────────────────────
-function saveComplaint(courseId, text, grade, total) {
-  const existing = getComplaints();
+export interface UserSession {
+  id: string;
+  name: string;
+  role: "admin" | "student";
+}
+
+export function saveUser(data: UserSession) {
+  sessionStorage.setItem("au_user", JSON.stringify(data));
+}
+
+export function getUser(): UserSession | null {
+  try { return JSON.parse(sessionStorage.getItem("au_user") ?? "null"); }
+  catch { return null; }
+}
+
+export function clearUser() {
+  sessionStorage.removeItem("au_user");
+}
+
+export interface Complaint {
+  id: number;
+  studentId: string;
+  course: string;
+  grade: string;
+  total: string;
+  complaintText: string;
+  status: "pending" | "accepted" | "rejected";
+  submittedAt: string;
+}
+
+export function saveComplaint(courseId: string, text: string, grade: string, total: string) {
   const user = getUser();
+  const existing = getComplaints();
   existing.push({
-    id: Date.now(),
-    studentId: user ? user.id : "",
-    course: courseId,
-    grade,
-    total,
-    complaintText: text,
-    status: "pending",
-    submittedAt: new Date().toISOString()
+    id: Date.now(), studentId: user?.id ?? "", course: courseId,
+    grade, total, complaintText: text, status: "pending",
+    submittedAt: new Date().toISOString(),
   });
   localStorage.setItem("au_complaints", JSON.stringify(existing));
 }
 
-function getComplaints() {
-  try { return JSON.parse(localStorage.getItem("au_complaints")) || []; }
-  catch(e) { return []; }
+export function getComplaints(): Complaint[] {
+  try { return JSON.parse(localStorage.getItem("au_complaints") ?? "[]"); }
+  catch { return []; }
 }
 
-function updateComplaintStatus(id, status) {
+export function updateComplaintStatus(id: number, status: "accepted" | "rejected") {
   const all = getComplaints();
-  const idx = all.findIndex(c => c.id === id);
-  if (idx !== -1) {
-    all[idx].status = status;
-    localStorage.setItem("au_complaints", JSON.stringify(all));
-  }
+  const idx = all.findIndex((c) => c.id === id);
+  if (idx !== -1) { all[idx].status = status; localStorage.setItem("au_complaints", JSON.stringify(all)); }
 }
 
-// ── Notification store ────────────────────────────────────────
-function saveNotification(title, body, course) {
-  const existing = getNotifications();
-  existing.unshift({ id: Date.now(), title, body, course, sentAt: new Date().toISOString() });
-  localStorage.setItem("au_notifications", JSON.stringify(existing.slice(0, 50)));
-}
+export const COURSES = [
+  "Geometric Design of Road and Streets (CEng 3201)",
+  "Transport Planning and Modeling (CEng 2901)",
+];
 
-function getNotifications() {
-  try { return JSON.parse(localStorage.getItem("au_notifications")) || []; }
-  catch(e) { return []; }
-}
-
-// ── Toggle sidebar (mobile) ──────────────────────────────────
-function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("open");
-}
-
-// ── Toggle password visibility ───────────────────────────────
-function togglePwd(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (input.type === "password") { input.type = "text"; btn.textContent = "🙈"; }
-  else { input.type = "password"; btn.textContent = "👁"; }
-}
-
-// ── Generic modal close ──────────────────────────────────────
-function closeModal(id) {
-  document.getElementById(id).style.display = "none";
-}
-
-// ── doLogout ─────────────────────────────────────────────────
-function doLogout() {
-  clearUser();
-  window.location.href = isInPages() ? "../index.html" : "index.html";
-}
-
-function isInPages() {
-  return window.location.pathname.includes("/pages/");
-}
+export const COURSE_SHORT: Record<string, string> = {
+  "Geometric Design of Road and Streets (CEng 3201)": "CEng 3201",
+  "Transport Planning and Modeling (CEng 2901)": "CEng 2901",
+};
