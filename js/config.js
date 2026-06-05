@@ -13,11 +13,15 @@ const CONFIG = {
 
 // ── Shared API caller ────────────────────────────────────────
 // ── Shared API caller (CORS-safe for Google Apps Script) ────
+
 async function apiCall(payload) {
-  // GAS doesn't accept JSON cross-origin. We must POST as form-encoded
-  // with no-cors, then do a GET to read the response.
-  const params = new URLSearchParams();
-  params.append("payload", JSON.stringify(payload));
+  const url = CONFIG.API_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
+  const res = await fetch(url, {
+    method: "GET",
+    redirect: "follow"
+  });
+  return await res.json();
+}
 
   // Fire the POST (no-cors = no response body, but GAS receives it)
   await fetch(CONFIG.API_URL, {
