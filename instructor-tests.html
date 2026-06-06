@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Questions – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'tests' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Upload Exam Questions</h1>
+        <p>Add multiple-choice questions for online tests.</p>
+      </div>
+
+      <div class="card" style="max-width:680px;">
+        <div class="card-header"><span class="card-title">📝 New Question</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Course</label>
+            <select class="form-control" id="qCourse">
+              <option value="">— Select Course —</option>
+              ${CONFIG.COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Question Text</label>
+            <textarea class="form-control" id="qText" rows="3" placeholder="Write your question here..."></textarea>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Option A</label>
+              <input type="text" id="qA" class="form-control" placeholder="Option A">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Option B</label>
+              <input type="text" id="qB" class="form-control" placeholder="Option B">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Option C</label>
+              <input type="text" id="qC" class="form-control" placeholder="Option C">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Option D</label>
+              <input type="text" id="qD" class="form-control" placeholder="Option D">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Correct Answer</label>
+            <select class="form-control" id="qCorrect">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="uploadQBtn" onclick="uploadQuestion()">Upload Question</button>
+        </div>
+      </div>
+
+      <!-- Existing Questions -->
+      <div class="card mt-24">
+        <div class="card-header">
+          <span class="card-title">📋 Existing Questions</span>
+          <select class="form-control" id="viewCourse" style="width:280px;" onchange="loadQuestions()">
+            <option value="">— Filter by course —</option>
+            ${CONFIG.COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div id="questionsList" style="padding:24px;">
+          <div class="empty-state"><div class="empty-icon">📋</div><p>Select a course to view questions.</p></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  window.uploadQuestion = async function() {
+    const course   = document.getElementById('qCourse').value;
+    const question = document.getElementById('qText').value.trim();
+    const optionA  = document.getElementById('qA').value.trim();
+    const optionB  = document.getElementById('qB').value.trim();
+    const optionC  = document.getElementById('qC').value.trim();
+    const optionD  = document.getElementById('qD').value.trim();
+    const correct  = document.getElementById('qCorrect').value;
+
+    if (!course || !question || !optionA || !optionB || !optionC || !optionD) {
+      Toast.error('Please fill in all fields.'); return;
+    }
+
+    const btn = document.getElementById('uploadQBtn');
+    Loader.show(btn, 'Uploading...');
+    const res = await API.uploadQuestion({ course, question, optionA, optionB, optionC, optionD, correctAnswer: correct });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Question uploaded!');
+      ['qText','qA','qB','qC','qD'].forEach(id => document.getElementById(id).value = '');
+      loadQuestions();
+    } else {
+      Toast.error(res.message);
+    }
+  };
+
+  window.loadQuestions = async function() {
+    const course = document.getElementById('viewCourse').value;
+    if (!course) return;
+    const ql = document.getElementById('questionsList');
+    ql.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>Loading...</p></div>';
+    const res = await API.getOnlineTests(course);
+    if (!res.success || !res.questions.length) {
+      ql.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No questions yet.</p></div>';
+      return;
+    }
+    ql.innerHTML = res.questions.map((q, i) => `
+      <div style="padding:14px 0;border-bottom:1px solid var(--border);">
+        <div class="fw-600 text-sm mb-6">${i+1}. ${q.question}</div>
+        <div class="text-xs text-muted">A: ${q.optionA} &nbsp;|&nbsp; B: ${q.optionB} &nbsp;|&nbsp; C: ${q.optionC} &nbsp;|&nbsp; D: ${q.optionD}</div>
+      </div>
+    `).join('');
+  };
+})();
+</script>
+</body>
+</html>

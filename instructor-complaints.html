@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complaints – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'complaints' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Student Complaints</h1>
+        <p>Review and resolve student mark complaints.</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="filterComplaints('all', this)">All</button>
+        <button class="tab-btn" onclick="filterComplaints('Pending', this)">Pending</button>
+        <button class="tab-btn" onclick="filterComplaints('Resolved', this)">Resolved</button>
+        <button class="tab-btn" onclick="filterComplaints('Rejected', this)">Rejected</button>
+      </div>
+
+      <div id="complaintsContent">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading complaints...</p></div>
+      </div>
+    </div>
+
+    <!-- Resolve Modal -->
+    <div class="modal-overlay" id="resolveModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Respond to Complaint</h3>
+          <button class="btn btn-ghost btn-icon" onclick="closeResolve()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="complaintDetail" style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;font-size:.88rem;line-height:1.6;"></div>
+          <div class="form-group">
+            <label class="form-label">Resolution</label>
+            <select class="form-control" id="resolveStatus">
+              <option value="Resolved">Resolved – Mark corrected</option>
+              <option value="Rejected">Rejected – Mark is correct</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Response Message</label>
+            <textarea class="form-control" id="resolveMsg" rows="3" placeholder="Explain your decision..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeResolve()">Cancel</button>
+          <button class="btn btn-primary" id="resolveBtn" onclick="doResolve()">Submit Response</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let allComplaints = [];
+  let selectedComplaint = null;
+
+  const res = await API.getComplaints();
+  allComplaints = res.success ? res.complaints : [];
+  filterComplaints('all');
+
+  window.filterComplaints = function(status, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn?.classList.add('active');
+    const filtered = status === 'all' ? allComplaints : allComplaints.filter(c => c['Status'] === status);
+    renderComplaints(filtered);
+  };
+
+  function renderComplaints(complaints) {
+    const cc = document.getElementById('complaintsContent');
+    if (!complaints.length) {
+      cc.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No complaints</h3></div>`;
+      return;
+    }
+    const statusBadge = { Pending: 'badge-warning', Resolved: 'badge-success', Rejected: 'badge-danger' };
+    cc.innerHTML = complaints.map((c, i) => `
+      <div class="card mb-16">
+        <div class="card-body">
+          <div class="flex-between mb-12">
+            <div>
+              <span class="fw-600">${c['StudentID']}</span>
+              <span class="badge ${statusBadge[c['Status']] || 'badge-neutral'} ml-8" style="margin-left:8px;">${c['Status']}</span>
+            </div>
+            <span class="text-xs text-muted">${new Date(c['Timestamp']).toLocaleString()}</span>
+          </div>
+          <div class="text-sm mb-8"><strong>Course:</strong> ${c['Course'] || '—'}</div>
+          <div class="text-sm mb-8"><strong>Type:</strong> ${c['Type'] || '—'}</div>
+          <div class="text-sm mb-12" style="background:var(--bg);padding:10px;border-radius:var(--radius-sm);">${c['Message'] || ''}</div>
+          ${c['Response'] ? `<div class="text-sm text-muted"><strong>Response:</strong> ${c['Response']}</div>` : ''}
+          ${c['Status'] === 'Pending' ? `
+            <div class="mt-12">
+              <button class="btn btn-primary btn-sm" onclick="openResolve(${i})">📝 Respond</button>
+            </div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.openResolve = function(idx) {
+    selectedComplaint = allComplaints[idx];
+    document.getElementById('complaintDetail').innerHTML = `
+      <strong>${selectedComplaint['StudentID']}</strong> — ${selectedComplaint['Type']}<br>
+      <em>${selectedComplaint['Message']}</em>`;
+    document.getElementById('resolveModal').classList.add('show');
+  };
+
+  window.closeResolve = () => document.getElementById('resolveModal').classList.remove('show');
+
+  window.doResolve = async function() {
+    const status = document.getElementById('resolveStatus').value;
+    const response = document.getElementById('resolveMsg').value.trim();
+    if (!response) { Toast.error('Please write a response message.'); return; }
+
+    const btn = document.getElementById('resolveBtn');
+    Loader.show(btn, 'Saving...');
+    const res = await API.resolveComplaint({
+      studentId: selectedComplaint['StudentID'],
+      timestamp: selectedComplaint['Timestamp'],
+      status, response
+    });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Complaint resolved!');
+      closeResolve();
+      const r2 = await API.getComplaints();
+      allComplaints = r2.success ? r2.complaints : [];
+      filterComplaints('all');
+    } else {
+      Toast.error(res.message);
+    }
+  };
+})();
+</script>
+</body>
+</html>

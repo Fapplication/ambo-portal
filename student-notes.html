@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lecture Notes – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  renderLayout({ role: 'student', activePage: 'notes' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Lecture Notes</h1>
+        <p>Download study materials uploaded by your instructor.</p>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body" style="padding-bottom:0;">
+          <div class="form-group" style="max-width:320px;">
+            <label class="form-label">Filter by Course</label>
+            <select class="form-control" id="courseFilter" onchange="filterNotes()">
+              <option value="">All Courses</option>
+              ${CONFIG.COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="notesGrid">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading notes...</p></div>
+      </div>
+    </div>
+  `;
+
+  let allNotes = [];
+
+  const res = await API.getLectureNotes();
+  if (res.success) {
+    allNotes = res.notes;
+    renderNotes(allNotes);
+  } else {
+    document.getElementById('notesGrid').innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No notes found</h3></div>`;
+  }
+
+  window.filterNotes = function() {
+    const course = document.getElementById('courseFilter').value;
+    const filtered = course ? allNotes.filter(n => n['Course_Name'] === course) : allNotes;
+    renderNotes(filtered);
+  };
+
+  function renderNotes(notes) {
+    const grid = document.getElementById('notesGrid');
+    if (!notes.length) {
+      grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No notes available</h3><p>No lecture notes have been uploaded for this course yet.</p></div>`;
+      return;
+    }
+    grid.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+        ${notes.map(n => `
+          <div class="card" style="transition:var(--transition);" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadow-md)'" onmouseleave="this.style.transform='';this.style.boxShadow=''">
+            <div class="card-body">
+              <div style="font-size:2rem;margin-bottom:12px;">📄</div>
+              <div class="fw-600 mb-8">${n['Topic_Title'] || 'Untitled'}</div>
+              <div class="text-xs text-muted mb-16">${n['Course_Name'] || ''}</div>
+              <a href="${n['Resource_URL']}" target="_blank" class="btn btn-primary btn-sm btn-full">⬇ Download / Open</a>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>

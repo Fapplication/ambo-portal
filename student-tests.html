@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Tests – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  renderLayout({ role: 'student', activePage: 'tests' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Online Tests</h1>
+        <p>Select a course to start your test. Answer all questions carefully.</p>
+      </div>
+
+      <!-- Course Selector -->
+      <div class="card mb-24" id="courseSelectCard">
+        <div class="card-header"><span class="card-title">📚 Select Course</span></div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:12px;" id="courseList">
+            ${CONFIG.COURSES.map(c => `
+              <button class="btn btn-outline" style="justify-content:flex-start;padding:14px 18px;"
+                      onclick="startTest('${c}')">
+                <span>📝</span> ${c}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Area (hidden initially) -->
+      <div id="testArea" class="hidden"></div>
+
+      <!-- Result Area (hidden initially) -->
+      <div id="resultArea" class="hidden"></div>
+    </div>
+  `;
+
+  let questions = [];
+  let answers = {};
+  let currentQ = 0;
+  let testCourse = '';
+  let timer = null;
+  let timeLeft = 0;
+
+  window.startTest = async function(course) {
+    testCourse = course;
+    document.getElementById('courseSelectCard').classList.add('hidden');
+
+    const ta = document.getElementById('testArea');
+    ta.innerHTML = `<div class="empty-state"><div class="empty-icon">⏳</div><p>Loading questions...</p></div>`;
+    ta.classList.remove('hidden');
+
+    const res = await API.getOnlineTests(course);
+    if (!res.success || !res.questions.length) {
+      ta.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No questions available</h3><p>Questions for this course have not been added yet.</p>
+        <button class="btn btn-outline mt-16" onclick="location.reload()">← Back</button></div>`;
+      return;
+    }
+
+    questions = res.questions;
+    answers = {};
+    currentQ = 0;
+    timeLeft = questions.length * 90; // 90s per question
+    renderQuestion();
+    startTimer();
+  };
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      timeLeft--;
+      const el = document.getElementById('timerDisplay');
+      if (el) {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+        if (timeLeft <= 60) el.style.color = 'var(--danger)';
+      }
+      if (timeLeft <= 0) { clearInterval(timer); submitTest(); }
+    }, 1000);
+  }
+
+  function renderQuestion() {
+    const q = questions[currentQ];
+    const pct = ((currentQ) / questions.length * 100).toFixed(0);
+    const options = ['A','B','C','D'];
+    const optTexts = [q.optionA, q.optionB, q.optionC, q.optionD];
+
+    document.getElementById('testArea').innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📝 ${testCourse.substring(0,40)}...</div>
+            <div class="text-xs text-muted">Question ${currentQ+1} of ${questions.length}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span id="timerDisplay" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.1rem;">—:——</span>
+            <button class="btn btn-danger btn-sm" onclick="if(confirm('Submit now?')) submitTest()">Submit Test</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="quiz-progress-bar mb-16">
+            <div class="quiz-progress-fill" style="width:${pct}%"></div>
+          </div>
+
+          <p class="fw-600 mb-16" style="font-size:1rem;color:var(--text);">${currentQ+1}. ${q.question}</p>
+
+          <div style="display:flex;flex-direction:column;gap:10px;" id="optionsContainer">
+            ${options.map((opt, i) => `
+              <div class="quiz-option ${answers[currentQ] === opt ? 'selected' : ''}"
+                   onclick="selectAnswer('${opt}', this)"
+                   data-opt="${opt}">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);
+                            display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0;">${opt}</div>
+                <span>${optTexts[i]}</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="flex-between mt-24">
+            <button class="btn btn-outline" onclick="prevQ()" ${currentQ === 0 ? 'disabled' : ''}>← Previous</button>
+            <span class="text-sm text-muted">${Object.keys(answers).length} / ${questions.length} answered</span>
+            ${currentQ < questions.length - 1
+              ? `<button class="btn btn-primary" onclick="nextQ()">Next →</button>`
+              : `<button class="btn btn-success" onclick="if(confirm('Submit test?')) submitTest()">Submit ✓</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  window.selectAnswer = function(opt, el) {
+    answers[currentQ] = opt;
+    document.querySelectorAll('.quiz-option').forEach(o => {
+      o.classList.toggle('selected', o.dataset.opt === opt);
+    });
+  };
+
+  window.prevQ = function() { if (currentQ > 0) { currentQ--; renderQuestion(); } };
+  window.nextQ = function() { if (currentQ < questions.length-1) { currentQ++; renderQuestion(); } };
+
+  window.submitTest = async function() {
+    clearInterval(timer);
+    // Calculate score (we don't have correct answers on client for security, so just count answered)
+    const answered = Object.keys(answers).length;
+    const res = await API.submitTestResult({
+      studentId: session.studentId,
+      course: testCourse,
+      score: answered,
+      total: questions.length
+    });
+
+    document.getElementById('testArea').classList.add('hidden');
+    const ra = document.getElementById('resultArea');
+    ra.classList.remove('hidden');
+    ra.innerHTML = `
+      <div class="card text-center">
+        <div class="card-body" style="padding:48px 24px;">
+          <div style="font-size:4rem;margin-bottom:16px;">🎉</div>
+          <h2>Test Submitted!</h2>
+          <p class="mt-8">You answered <strong>${answered}</strong> out of <strong>${questions.length}</strong> questions.</p>
+          <p class="text-sm text-muted mt-8">Your instructor will review and announce scores.</p>
+          <div class="flex-center gap-12 mt-24">
+            <button class="btn btn-outline" onclick="location.reload()">Take Another Test</button>
+            <button class="btn btn-primary" onclick="window.location.href='student-dashboard.html'">Back to Dashboard</button>
+          </div>
+        </div>
+      </div>`;
+  };
+})();
+</script>
+</body>
+</html>

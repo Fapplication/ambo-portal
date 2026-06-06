@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  renderLayout({ role: 'student', activePage: 'notifications' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>🔔 Notifications</h1>
+        <p>Notices and announcements from your instructor.</p>
+      </div>
+      <div id="noticesContent">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading...</p></div>
+      </div>
+    </div>
+  `;
+
+  const res = await API.call('getNotices');
+  const nc = document.getElementById('noticesContent');
+
+  if (!res || !res.success || !res.notices || !res.notices.length) {
+    nc.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No notifications yet</h3>
+        <p>Your instructor hasn't posted any notices yet. Check back later.</p>
+      </div>`;
+    return;
+  }
+
+  nc.innerHTML = res.notices.reverse().map(n => `
+    <div class="card mb-16">
+      <div class="card-body">
+        <div class="flex-between mb-8">
+          <div class="fw-600">📣 ${n['Title'] || 'Notice'}</div>
+          <span class="text-xs text-muted">${new Date(n['Timestamp']).toLocaleString()}</span>
+        </div>
+        <p style="color:var(--text);line-height:1.7;">${n['Message'] || ''}</p>
+      </div>
+    </div>
+  `).join('');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lecture Notes – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'notes' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Upload Lecture Notes</h1>
+        <p>Add study materials accessible to students.</p>
+      </div>
+
+      <div class="grid-2" style="align-items:flex-start;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📤 Upload New Note</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="form-group">
+              <label class="form-label">Course</label>
+              <select class="form-control" id="noteCourse">
+                <option value="">— Select Course —</option>
+                ${CONFIG.COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Topic Title</label>
+              <input type="text" id="noteTitle" class="form-control" placeholder="e.g. Chapter 3: Horizontal Alignment">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Resource URL</label>
+              <input type="url" id="noteUrl" class="form-control" placeholder="https://drive.google.com/...">
+              <span class="form-hint">Google Drive, Dropbox, OneDrive, or any direct link.</span>
+            </div>
+            <button class="btn btn-primary" id="uploadNoteBtn" onclick="uploadNote()">Upload Note</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Uploaded Notes</span>
+            <button class="btn btn-outline btn-sm" onclick="loadAllNotes()">Refresh</button>
+          </div>
+          <div id="notesList" style="padding:16px;">
+            <div class="empty-state"><div class="empty-icon">📚</div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  window.uploadNote = async function() {
+    const course = document.getElementById('noteCourse').value;
+    const title  = document.getElementById('noteTitle').value.trim();
+    const url    = document.getElementById('noteUrl').value.trim();
+
+    if (!course || !title || !url) { Toast.error('Fill in all fields.'); return; }
+
+    const btn = document.getElementById('uploadNoteBtn');
+    Loader.show(btn, 'Uploading...');
+    const res = await API.uploadLectureNote({ course, title, url });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Lecture note uploaded!');
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteUrl').value = '';
+      loadAllNotes();
+    } else {
+      Toast.error(res.message);
+    }
+  };
+
+  async function loadAllNotes() {
+    const res = await API.getLectureNotes();
+    const nl = document.getElementById('notesList');
+    if (!res.success || !res.notes.length) {
+      nl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No notes uploaded yet.</p></div>';
+      return;
+    }
+    nl.innerHTML = res.notes.map(n => `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div class="fw-600 text-sm">${n['Topic_Title']}</div>
+        <div class="text-xs text-muted mb-6">${n['Course_Name']}</div>
+        <a href="${n['Resource_URL']}" target="_blank" class="btn btn-outline btn-sm">🔗 Open Link</a>
+      </div>
+    `).join('');
+  }
+
+  loadAllNotes();
+})();
+</script>
+</body>
+</html>

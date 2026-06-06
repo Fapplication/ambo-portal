@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instructor Dashboard – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'dashboard' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Instructor Dashboard</h1>
+        <p>Overview of all courses, students, and pending actions.</p>
+      </div>
+
+      <div class="stats-grid" id="instrStats">
+        <div class="stat-card primary">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">📬</div>
+          <div class="stat-value" id="statComplaints">—</div>
+          <div class="stat-label">Pending Complaints</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">📚</div>
+          <div class="stat-value" id="statCourses">—</div>
+          <div class="stat-label">Active Courses</div>
+        </div>
+      </div>
+
+      <!-- Course Stats -->
+      <div class="card mb-24" id="courseStatsCard">
+        <div class="card-header"><span class="card-title">📊 Course Statistics</span></div>
+        <div class="card-body" id="courseStats">
+          <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading...</p></div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚡ Quick Actions</span></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+            <button class="btn btn-outline" onclick="location.href='instructor-marks.html'">📊 Manage Marks</button>
+            <button class="btn btn-outline" onclick="location.href='instructor-complaints.html'">📬 Complaints</button>
+            <button class="btn btn-outline" onclick="location.href='instructor-tests.html'">📝 Upload Questions</button>
+            <button class="btn btn-outline" onclick="location.href='instructor-notes.html'">📚 Lecture Notes</button>
+            <button class="btn btn-outline" onclick="location.href='instructor-notices.html'">📣 Send Notice</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const res = await API.getDashboard();
+  if (res.success) {
+    document.getElementById('statTotal').textContent = res.totalStudents;
+    document.getElementById('statComplaints').textContent = res.pendingComplaints;
+    document.getElementById('statCourses').textContent = res.courses.length;
+
+    document.getElementById('courseStats').innerHTML = res.courses.map(c => `
+      <div style="margin-bottom:20px;">
+        <div class="flex-between mb-8">
+          <div class="fw-600 text-sm">${c.course}</div>
+          <span class="badge badge-info">${c.count} students</span>
+        </div>
+        <div class="flex-between mb-6">
+          <span class="text-xs text-muted">Avg. Final: ${c.avgFinal}%</span>
+          <span class="text-xs text-muted">${c.avgFinal >= 50 ? '✅ Class passing' : '⚠ Needs attention'}</span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar" style="width:${Math.min(c.avgFinal, 100)}%;background:${c.avgFinal >= 50 ? 'var(--success)' : 'var(--danger)'}"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+})();
+</script>
+</body>
+</html>

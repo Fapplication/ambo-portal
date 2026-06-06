@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Marks – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'students' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Manage Student Marks</h1>
+        <p>View and update marks for each course.</p>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <div class="form-group" style="max-width:400px;">
+            <label class="form-label">Select Course</label>
+            <select class="form-control" id="courseSelect" onchange="loadStudents()">
+              <option value="">— Choose a course —</option>
+              ${CONFIG.COURSES.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="studentsSection" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" id="courseLabel">Students</span>
+            <div class="flex gap-8">
+              <input type="text" id="searchInput" class="form-control" placeholder="Search student..." oninput="filterTable()" style="width:200px;">
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table id="marksTable">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Quiz <small>(10)</small></th>
+                  <th>Mid <small>(30)</small></th>
+                  <th>Assignment <small>(10)</small></th>
+                  <th>Final <small>(50)</small></th>
+                  <th>Total</th>
+                  <th>Grade</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="marksBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Edit Mark</h3>
+            <p class="text-sm text-muted" id="editStudentLabel"></p>
+          </div>
+          <button class="btn btn-ghost btn-icon" onclick="closeEdit()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Mark Type</label>
+            <select class="form-control" id="editField">
+              <option value="Quiz">Quiz (max 10)</option>
+              <option value="Mid">Mid Exam (max 30)</option>
+              <option value="Assignment">Assignment (max 10)</option>
+              <option value="Final">Final Exam (max 50)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Value</label>
+            <input type="number" id="editValue" class="form-control" min="0" max="50" placeholder="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeEdit()">Cancel</button>
+          <button class="btn btn-primary" id="saveMarkBtn" onclick="saveMark()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let currentCourse = '';
+  let currentStudent = '';
+  let allStudents = [];
+
+  window.loadStudents = async function() {
+    const course = document.getElementById('courseSelect').value;
+    if (!course) return;
+    currentCourse = course;
+
+    document.getElementById('courseLabel').textContent = `📊 ${course}`;
+    document.getElementById('studentsSection').classList.remove('hidden');
+    document.getElementById('marksBody').innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:24px;">Loading...</td></tr>`;
+
+    const res = await API.getAllStudents(course);
+    allStudents = res.success ? res.students : [];
+    renderTable(allStudents);
+  };
+
+  function renderTable(students) {
+    const tbody = document.getElementById('marksBody');
+    if (!students.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:24px;">No students found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = students.map(s => {
+      const total = (Number(s['Quiz']||0) + Number(s['Mid']||0) + Number(s['Assignment']||0) + Number(s['Final']||0));
+      const g = getGradeLetter(total);
+      return `
+        <tr>
+          <td><code>${s['StudentID']}</code></td>
+          <td class="fw-600">${s['Name'] || '—'}</td>
+          <td>${s['Quiz'] || 0}</td>
+          <td>${s['Mid'] || 0}</td>
+          <td>${s['Assignment'] || 0}</td>
+          <td>${s['Final'] || 0}</td>
+          <td class="fw-700">${total}</td>
+          <td><span class="badge" style="background:${g.color}22;color:${g.color};">${g.letter}</span></td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="openEdit('${s['StudentID']}', '${(s['Name']||'').replace(/'/g,"\\'")}')">✏ Edit</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  window.filterTable = function() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allStudents.filter(s =>
+      (s['StudentID']||'').toLowerCase().includes(q) ||
+      (s['Name']||'').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+  };
+
+  window.openEdit = function(studentId, name) {
+    currentStudent = studentId;
+    document.getElementById('editStudentLabel').textContent = `${name} · ${studentId}`;
+    document.getElementById('editModal').classList.add('show');
+  };
+
+  window.closeEdit = function() {
+    document.getElementById('editModal').classList.remove('show');
+  };
+
+  window.saveMark = async function() {
+    const field = document.getElementById('editField').value;
+    const value = Number(document.getElementById('editValue').value);
+    const maxes = { Quiz: 10, Mid: 30, Assignment: 10, Final: 50 };
+
+    if (isNaN(value) || value < 0) { Toast.error('Enter a valid mark.'); return; }
+    if (value > maxes[field]) { Toast.error(`Max for ${field} is ${maxes[field]}.`); return; }
+
+    const btn = document.getElementById('saveMarkBtn');
+    Loader.show(btn, 'Saving...');
+    const res = await API.updateMark({ course: currentCourse, studentId: currentStudent, field, value });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Mark updated successfully!');
+      closeEdit();
+      loadStudents();
+    } else {
+      Toast.error(res.message);
+    }
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  renderLayout({ role: 'student', activePage: 'chatbot' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>🤖 AI Chatbot Assistant</h1>
+        <p>Ask questions about your marks, tests, lecture notes, and more.</p>
+      </div>
+
+      <div class="card" style="max-width:700px;">
+        <div class="card-header">
+          <span class="card-title">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--success);display:inline-block;"></span>
+            Portal Assistant
+          </span>
+        </div>
+        <div class="chat-box">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-bubble bot">
+              👋 Hello, ${session.name.split(' ')[0]}! I'm your portal assistant. Ask me about your marks, online tests, lecture notes, or complaints.
+            </div>
+            <div class="chat-bubble bot">
+              💡 Quick tips: "view marks", "how to submit complaint", "lecture notes", "online test help"
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" class="form-control" placeholder="Type your question..." onkeydown="if(event.key==='Enter') sendMsg()">
+            <button class="btn btn-primary" onclick="sendMsg()">Send ➤</button>
+          </div>
+        </div>
+
+        <!-- Quick prompts -->
+        <div class="card-body" style="border-top:1px solid var(--border);padding:12px 16px;">
+          <div class="text-xs text-muted mb-8">Quick questions:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${['How do I view my marks?','How to submit a complaint?','Where are lecture notes?','How to take an online test?'].map(q => `
+              <button class="btn btn-outline btn-sm" onclick="quickSend('${q}')">${q}</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  function appendMsg(text, type) {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `chat-bubble ${type}`;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  function appendTyping() {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-bubble bot';
+    div.id = 'typingIndicator';
+    div.innerHTML = '<span style="letter-spacing:3px;font-size:1.2rem;">...</span>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  async function sendMessage(text) {
+    if (!text.trim()) return;
+    appendMsg(text, 'user');
+    document.getElementById('chatInput').value = '';
+    appendTyping();
+
+    const res = await API.chatbot(text, session.studentId);
+    document.getElementById('typingIndicator')?.remove();
+    appendMsg(res.reply || 'Sorry, I could not process that.', 'bot');
+  }
+
+  window.sendMsg = () => {
+    const input = document.getElementById('chatInput');
+    sendMessage(input.value.trim());
+  };
+
+  window.quickSend = (q) => sendMessage(q);
+})();
+</script>
+</body>
+</html>

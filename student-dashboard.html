@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  document.title = `Dashboard – ${session.name}`;
+
+  // Inject layout first (creates #pageContent)
+  renderLayout({ role: 'student', activePage: 'dashboard' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Welcome back, ${session.name.split(' ')[0]} 👋</h1>
+        <p>Here's your academic overview for this semester.</p>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card primary">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="statCourses">—</div>
+          <div class="stat-label">Enrolled Courses</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="statAvg">—</div>
+          <div class="stat-label">Average Score</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="statPassed">—</div>
+          <div class="stat-label">Courses Passing</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value" id="statPending">—</div>
+          <div class="stat-label">Pending Complaints</div>
+        </div>
+      </div>
+
+      <!-- Courses Overview -->
+      <div class="card mb-24" id="coursesCard">
+        <div class="card-header">
+          <span class="card-title">📚 Course Marks Overview</span>
+          <button class="btn btn-outline btn-sm" onclick="window.location.href='student-marks.html'">View Details</button>
+        </div>
+        <div class="card-body" id="coursesBody">
+          <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading marks...</p></div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚡ Quick Actions</span></div>
+        <div class="card-body">
+          <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+            <button class="btn btn-outline" onclick="window.location.href='student-marks.html'">📊 View Marks</button>
+            <button class="btn btn-outline" onclick="window.location.href='student-tests.html'">📝 Take Test</button>
+            <button class="btn btn-outline" onclick="window.location.href='student-notes.html'">📚 Lecture Notes</button>
+            <button class="btn btn-outline" onclick="window.location.href='student-chatbot.html'">🤖 Ask Chatbot</button>
+            <button class="btn btn-outline" onclick="window.location.href='student-notifications.html'">🔔 Notifications</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Load marks
+  const res = await API.getMarks(session.studentId);
+  if (res.success && res.marks.length) {
+    const marks = res.marks;
+    const totals = marks.map(m => m.total || 0);
+    const avg = (totals.reduce((a,b) => a+b, 0) / totals.length).toFixed(1);
+    const passed = totals.filter(t => t >= 50).length;
+
+    document.getElementById('statCourses').textContent = marks.length;
+    document.getElementById('statAvg').textContent = avg;
+    document.getElementById('statPassed').textContent = passed;
+    document.getElementById('statPending').textContent = '0';
+
+    document.getElementById('coursesBody').innerHTML = marks.map(m => {
+      const g = getGradeLetter(m.total);
+      const pct = Math.min(m.total, 100);
+      return `
+        <div style="margin-bottom:20px;">
+          <div class="flex-between mb-8">
+            <div>
+              <div class="fw-600 text-sm">${m.course}</div>
+              <div class="text-xs text-muted">Quiz: ${m.quiz||0} &nbsp;|&nbsp; Mid: ${m.mid||0} &nbsp;|&nbsp; Assignment: ${m.assignment||0} &nbsp;|&nbsp; Final: ${m.final||0}</div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:1.4rem;font-weight:700;color:${g.color}">${m.total||0}</span>
+              <span class="badge" style="background:${g.color}20;color:${g.color};margin-left:6px;">${g.letter}</span>
+            </div>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" style="width:${pct}%;background:${g.color}"></div>
+          </div>
+        </div>`;
+    }).join('');
+  } else {
+    document.getElementById('coursesBody').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No marks yet</h3>
+        <p>Your marks will appear here once uploaded by your instructor.</p>
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Marks – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireStudent();
+  if (!session) return;
+
+  renderLayout({ role: 'student', activePage: 'marks' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>My Marks</h1>
+        <p>View your grades and accept or raise a complaint.</p>
+      </div>
+      <div id="marksContent">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading your marks...</p></div>
+      </div>
+    </div>
+
+    <!-- Complaint Modal -->
+    <div class="modal-overlay" id="complaintModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h3>Submit Complaint</h3>
+            <p class="text-sm text-muted" id="complaintCourse"></p>
+          </div>
+          <button class="btn btn-ghost btn-icon" onclick="closeComplaint()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Complaint Type</label>
+            <select class="form-control" id="complaintType">
+              <option value="Marking Error">Marking Error</option>
+              <option value="Missing Mark">Missing Mark</option>
+              <option value="Grade Appeal">Grade Appeal</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Your Message</label>
+            <textarea class="form-control" id="complaintMsg" rows="4" placeholder="Describe your concern in detail..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeComplaint()">Cancel</button>
+          <button class="btn btn-primary" id="submitComplaintBtn" onclick="doSubmitComplaint()">Submit Complaint</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let currentCourse = '';
+
+  const res = await API.getMarks(session.studentId);
+  const mc = document.getElementById('marksContent');
+
+  if (!res.success || !res.marks.length) {
+    mc.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No marks available</h3>
+        <p>Your marks will appear here once your instructor uploads them.</p>
+      </div>`;
+    return;
+  }
+
+  mc.innerHTML = res.marks.map(m => {
+    const g = getGradeLetter(m.total);
+    const comps = [
+      { label: 'Quiz',       val: m.quiz || 0,       max: 10 },
+      { label: 'Mid Exam',   val: m.mid  || 0,       max: 30 },
+      { label: 'Assignment', val: m.assignment || 0,  max: 10 },
+      { label: 'Final Exam', val: m.final || 0,      max: 50 },
+    ];
+    return `
+      <div class="card mb-24">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📚 ${m.course}</div>
+          </div>
+          <div class="flex gap-8" style="align-items:center;">
+            <div style="text-align:right;">
+              <div style="font-size:2rem;font-weight:700;color:${g.color};line-height:1;">${m.total||0}<span style="font-size:.9rem;">/100</span></div>
+              <span class="badge" style="background:${g.color}22;color:${g.color};">${g.letter}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(180px,1fr));gap:16px;margin-bottom:20px;">
+            ${comps.map(c => `
+              <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;">
+                <div class="flex-between mb-8">
+                  <span class="text-sm fw-600">${c.label}</span>
+                  <span class="fw-700">${c.val}<span class="text-muted text-xs">/${c.max}</span></span>
+                </div>
+                <div class="progress">
+                  <div class="progress-bar" style="width:${(c.val/c.max*100).toFixed(0)}%;background:var(--primary-light)"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex gap-8" style="flex-wrap:wrap;">
+            <button class="btn btn-success btn-sm" onclick="acceptMark('${m.course}')">✓ Accept Marks</button>
+            <button class="btn btn-danger btn-sm" onclick="openComplaint('${m.course}')">⚠ Raise Complaint</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  window.acceptMark = function(course) {
+    Toast.success(`Marks accepted for "${course.substring(0,30)}..."`);
+  };
+
+  window.openComplaint = function(course) {
+    currentCourse = course;
+    document.getElementById('complaintCourse').textContent = course;
+    document.getElementById('complaintModal').classList.add('show');
+  };
+
+  window.closeComplaint = function() {
+    document.getElementById('complaintModal').classList.remove('show');
+  };
+
+  window.doSubmitComplaint = async function() {
+    const type = document.getElementById('complaintType').value;
+    const msg  = document.getElementById('complaintMsg').value.trim();
+    if (!msg) { Toast.error('Please write your complaint message.'); return; }
+
+    const btn = document.getElementById('submitComplaintBtn');
+    Loader.show(btn, 'Submitting...');
+    const res = await API.submitComplaint({
+      studentId: session.studentId,
+      course: currentCourse,
+      type, message: msg
+    });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Complaint submitted successfully!');
+      closeComplaint();
+      document.getElementById('complaintMsg').value = '';
+    } else {
+      Toast.error(res.message);
+    }
+  };
+})();
+</script>
+</body>
+</html>

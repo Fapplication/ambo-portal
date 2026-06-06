@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Civil Engineering Student Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="auth-body">
+
+<div class="auth-split">
+  <!-- Left panel -->
+  <div class="auth-hero">
+    <div class="auth-hero-content">
+      <div class="hero-logo">
+        <span>🏛️</span>
+        <span>Civil Eng. Portal</span>
+      </div>
+      <h1>Your Academic Hub</h1>
+      <p>Access marks, take online tests, download lecture notes, and communicate with your instructor — all in one place.</p>
+      <div class="hero-features">
+        <div class="hero-feature"><span>📊</span> View & Accept Marks</div>
+        <div class="hero-feature"><span>📝</span> Online Assessments</div>
+        <div class="hero-feature"><span>📚</span> Lecture Notes</div>
+        <div class="hero-feature"><span>🤖</span> AI Chatbot Support</div>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+        <path d="M0,60 C360,120 1080,0 1440,60 L1440,120 L0,120 Z" fill="rgba(255,255,255,0.06)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-panel">
+    <div class="auth-card">
+
+      <!-- Role Toggle -->
+      <div class="role-toggle">
+        <button class="role-btn active" data-role="student" onclick="switchRole('student', this)">
+          🎓 Student
+        </button>
+        <button class="role-btn" data-role="instructor" onclick="switchRole('instructor', this)">
+          👨‍🏫 Instructor
+        </button>
+      </div>
+
+      <!-- ── STUDENT SECTION ── -->
+      <div id="studentSection">
+        <div class="tabs" style="margin-bottom:0; border:none;">
+          <button class="tab-btn active" onclick="showAuthTab('login', this)">Login</button>
+          <button class="tab-btn" onclick="showAuthTab('register', this)">Register</button>
+        </div>
+
+        <!-- Student Login -->
+        <div id="loginTab" class="tab-content active mt-16">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="form-group">
+              <label class="form-label">Student ID</label>
+              <input type="text" id="loginId" class="form-control" placeholder="e.g. ETS0123/14">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="loginPass" class="form-control" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary btn-full btn-lg mt-8" id="loginBtn" onclick="doStudentLogin()">
+              Login
+            </button>
+          </div>
+        </div>
+
+        <!-- Student Register -->
+        <div id="registerTab" class="tab-content mt-16">
+          <!-- Step 1: ID Check -->
+          <div id="regStep1" style="display:flex;flex-direction:column;gap:14px;">
+            <p class="text-sm text-muted">Registration requires a pre-authorized Student ID.</p>
+            <div class="form-group">
+              <label class="form-label">Student ID</label>
+              <input type="text" id="regId" class="form-control" placeholder="e.g. ETS0123/14">
+            </div>
+            <button class="btn btn-primary btn-full" id="checkIdBtn" onclick="doCheckID()">
+              Continue →
+            </button>
+          </div>
+
+          <!-- Step 2: OTP -->
+          <div id="regStep2" style="display:none;flex-direction:column;gap:14px;">
+            <div class="step-indicator">
+              <div class="step-badge">Step 2 of 3</div>
+              <p class="text-sm text-muted">An OTP has been sent. Enter it below.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">OTP Code</label>
+              <input type="text" id="regOtp" class="form-control" placeholder="6-digit code" maxlength="6">
+            </div>
+            <button class="btn btn-primary btn-full" id="verifyOtpBtn" onclick="doVerifyOTP()">Verify OTP</button>
+            <button class="btn btn-ghost btn-full btn-sm" onclick="backToStep1()">← Back</button>
+          </div>
+
+          <!-- Step 3: Set Password -->
+          <div id="regStep3" style="display:none;flex-direction:column;gap:14px;">
+            <div class="step-indicator">
+              <div class="step-badge">Step 3 of 3</div>
+              <p class="text-sm text-muted">Welcome, <strong id="regName"></strong>! Set your password.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="regPass" class="form-control" placeholder="Min. 6 characters">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" id="regPassConfirm" class="form-control" placeholder="Repeat password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Telegram Username <span class="text-muted">(optional)</span></label>
+              <input type="text" id="regTelegram" class="form-control" placeholder="@username">
+            </div>
+            <button class="btn btn-success btn-full" id="completeRegBtn" onclick="doRegister()">
+              Complete Registration
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INSTRUCTOR SECTION ── -->
+      <div id="instructorSection" style="display:none; margin-top:8px;">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="instrUser" class="form-control" placeholder="admin">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="instrPass" class="form-control" placeholder="••••••••">
+          </div>
+          <button class="btn btn-primary btn-full btn-lg mt-8" id="instrLoginBtn" onclick="doInstructorLogin()">
+            Login as Instructor
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+  // ── State ────────────────────────────────────────────────────
+  let regStudentId = '';
+  let regVerifiedOtp = false;
+
+  // Redirect if already logged in
+  window.addEventListener('load', () => {
+    const s = Session.get();
+    if (s?.role === 'student')     window.location.href = 'student-dashboard.html';
+    if (s?.role === 'instructor')  window.location.href = 'instructor-dashboard.html';
+  });
+
+  // ── Role Toggle ──────────────────────────────────────────────
+  function switchRole(role, btn) {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('studentSection').style.display   = role === 'student'    ? '' : 'none';
+    document.getElementById('instructorSection').style.display = role === 'instructor' ? '' : 'none';
+  }
+
+  // ── Auth Tabs ────────────────────────────────────────────────
+  function showAuthTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+    document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+  }
+
+  // ── Student Login ────────────────────────────────────────────
+  async function doStudentLogin() {
+    const id   = document.getElementById('loginId').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    if (!id || !pass) { Toast.error('Please fill in all fields.'); return; }
+
+    const btn = document.getElementById('loginBtn');
+    Loader.show(btn, 'Logging in...');
+    const res = await API.loginStudent(id, pass);
+    Loader.hide(btn);
+
+    if (res.success) {
+      Session.set({ role: 'student', studentId: id, name: res.name });
+      Toast.success(`Welcome back, ${res.name}!`);
+      setTimeout(() => window.location.href = 'student-dashboard.html', 800);
+    } else {
+      Toast.error(res.message || 'Login failed.');
+    }
+  }
+
+  // ── Register Step 1 ──────────────────────────────────────────
+  async function doCheckID() {
+    const id = document.getElementById('regId').value.trim();
+    if (!id) { Toast.error('Enter your Student ID.'); return; }
+
+    const btn = document.getElementById('checkIdBtn');
+    Loader.show(btn, 'Checking...');
+    const res = await API.checkID(id);
+    Loader.hide(btn);
+
+    if (!res.success) { Toast.error(res.message); return; }
+    if (res.alreadyRegistered) {
+      Toast.warning('This ID is already registered. Please login.');
+      showAuthTab('login', document.querySelectorAll('.tab-btn')[0]);
+      return;
+    }
+
+    regStudentId = id;
+    document.getElementById('regName').textContent = res.name;
+
+    // Send OTP
+    await API.sendOTP(id);
+    Toast.info('OTP sent! Check your email.');
+
+    document.getElementById('regStep1').style.display = 'none';
+    document.getElementById('regStep2').style.display = 'flex';
+  }
+
+  // ── Register Step 2 ──────────────────────────────────────────
+  async function doVerifyOTP() {
+    const otp = document.getElementById('regOtp').value.trim();
+    if (!otp) { Toast.error('Enter the OTP code.'); return; }
+
+    const btn = document.getElementById('verifyOtpBtn');
+    Loader.show(btn, 'Verifying...');
+    const res = await API.verifyOTP(regStudentId, otp);
+    Loader.hide(btn);
+
+    if (res.success) {
+      regVerifiedOtp = otp;
+      document.getElementById('regStep2').style.display = 'none';
+      document.getElementById('regStep3').style.display = 'flex';
+      Toast.success('OTP verified!');
+    } else {
+      Toast.error(res.message || 'Invalid OTP.');
+    }
+  }
+
+  function backToStep1() {
+    document.getElementById('regStep2').style.display = 'none';
+    document.getElementById('regStep1').style.display = 'flex';
+  }
+
+  // ── Register Step 3 ──────────────────────────────────────────
+  async function doRegister() {
+    const pass    = document.getElementById('regPass').value;
+    const confirm = document.getElementById('regPassConfirm').value;
+    const tg      = document.getElementById('regTelegram').value.trim();
+
+    if (pass.length < 6)     { Toast.error('Password must be at least 6 characters.'); return; }
+    if (pass !== confirm)    { Toast.error('Passwords do not match.'); return; }
+
+    const btn = document.getElementById('completeRegBtn');
+    Loader.show(btn, 'Registering...');
+    const res = await API.register({
+      studentId: regStudentId,
+      otp: regVerifiedOtp,
+      password: pass,
+      telegramUsername: tg
+    });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Registration successful! Please login.');
+      setTimeout(() => showAuthTab('login', document.querySelectorAll('.tab-btn')[0]), 1000);
+    } else {
+      Toast.error(res.message || 'Registration failed.');
+    }
+  }
+
+  // ── Instructor Login ─────────────────────────────────────────
+  async function doInstructorLogin() {
+    const user = document.getElementById('instrUser').value.trim();
+    const pass = document.getElementById('instrPass').value;
+    if (!user || !pass) { Toast.error('Fill in all fields.'); return; }
+
+    const btn = document.getElementById('instrLoginBtn');
+    Loader.show(btn, 'Logging in...');
+    const res = await API.loginInstructor(user, pass);
+    Loader.hide(btn);
+
+    if (res.success) {
+      Session.set({ role: 'instructor', name: res.name });
+      Toast.success('Welcome, Instructor!');
+      setTimeout(() => window.location.href = 'instructor-dashboard.html', 800);
+    } else {
+      Toast.error(res.message || 'Invalid credentials.');
+    }
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const loginActive = document.getElementById('loginTab').classList.contains('active');
+    const studentVis  = document.getElementById('studentSection').style.display !== 'none';
+    if (studentVis && loginActive) doStudentLogin();
+  });
+</script>
+</body>
+</html>

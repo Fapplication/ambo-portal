@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Send Notice – Civil Eng. Portal</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+<script src="js/config.js"></script>
+<script src="js/layout.js"></script>
+<script>
+(async () => {
+  const session = Session.requireInstructor();
+  if (!session) return;
+
+  renderLayout({ role: 'instructor', activePage: 'notices' });
+
+  const pc = document.getElementById('pageContent');
+  pc.innerHTML = `
+    <div class="page-section">
+      <div class="mb-24">
+        <h1>Send Notice</h1>
+        <p>Broadcast announcements to all students.</p>
+      </div>
+
+      <div class="grid-2" style="align-items:flex-start;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📣 New Notice</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="form-group">
+              <label class="form-label">Notice Title</label>
+              <input type="text" id="noticeTitle" class="form-control" placeholder="e.g. Mid Exam Schedule">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message</label>
+              <textarea class="form-control" id="noticeMsg" rows="6" placeholder="Write your announcement here..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="sendNoticeBtn" onclick="sendNotice()">📣 Send to All Students</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Previous Notices</span>
+            <button class="btn btn-outline btn-sm" onclick="loadNotices()">Refresh</button>
+          </div>
+          <div id="noticesList" style="padding:16px;">
+            <div class="empty-state"><div class="empty-icon">⏳</div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  window.sendNotice = async function() {
+    const title   = document.getElementById('noticeTitle').value.trim();
+    const message = document.getElementById('noticeMsg').value.trim();
+    if (!title || !message) { Toast.error('Fill in all fields.'); return; }
+
+    const btn = document.getElementById('sendNoticeBtn');
+    Loader.show(btn, 'Sending...');
+    const res = await API.sendNotice({ title, message });
+    Loader.hide(btn);
+
+    if (res.success) {
+      Toast.success('Notice sent to all students!');
+      document.getElementById('noticeTitle').value = '';
+      document.getElementById('noticeMsg').value = '';
+      loadNotices();
+    } else {
+      Toast.error(res.message);
+    }
+  };
+
+  async function loadNotices() {
+    const res = await API.call('getNotices');
+    const nl = document.getElementById('noticesList');
+    if (!res || !res.success || !res.notices || !res.notices.length) {
+      nl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No notices sent yet.</p></div>';
+      return;
+    }
+    nl.innerHTML = res.notices.reverse().map(n => `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div class="fw-600 text-sm">${n['Title']}</div>
+        <div class="text-xs text-muted mb-6">${new Date(n['Timestamp']).toLocaleString()}</div>
+        <p style="font-size:.82rem;color:var(--text);">${(n['Message']||'').substring(0,120)}${n['Message']?.length > 120 ? '...' : ''}</p>
+      </div>
+    `).join('');
+  }
+
+  loadNotices();
+})();
+</script>
+</body>
+</html>
